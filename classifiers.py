@@ -25,6 +25,13 @@ def run_cv(X,y,clf_class,**kwargs):
 
 def accuracy(y_true,y_pred):
     # NumPy interprets True and False as 1. and 0.
+    indexlist=[]
+    for i in range(len(y_pred)):
+        indexlist.append(i)
+#    plt.figure()
+    plt.scatter(indexlist, y_pred, color='red')
+    plt.scatter(indexlist, y_true, color='blue')
+    plt.show()
     return np.mean(y_true == y_pred)
 
 def classifiers():
