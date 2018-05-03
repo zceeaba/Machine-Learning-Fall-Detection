@@ -31,13 +31,9 @@ def classifiers():
 
     results=wearable()
     df=pd.DataFrame(results)
-
-    msk = np.random.rand(len(df)) < 0.9
-
-    train = df[msk]
-
-    X=train.filter(items=['accelerationx','accelerationy','accelerationz'])
-    Y=train["groundtruthstate"]
+    
+    X=df.filter(items=['accelerationx','accelerationy','accelerationz'])
+    Y=df["groundtruthstate"]
     X = X.as_matrix().astype(np.float)
     Y = Y.as_matrix().astype(np.float)
 
