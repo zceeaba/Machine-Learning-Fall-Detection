@@ -41,8 +41,10 @@ def classifiers():
     X = X.as_matrix().astype(np.float)
     Y = Y.as_matrix().astype(np.float)
 
+    # optional StandardScaler()
     scaler = StandardScaler()
     X = scaler.fit_transform(X)
+
     print("Support vector machines:")
     print("%.3f" % accuracy(Y, run_cv(X,Y,SVC)))
     print("Random forest:")
