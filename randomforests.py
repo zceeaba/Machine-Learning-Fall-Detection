@@ -3,6 +3,7 @@ from sklearn import model_selection
 from sklearn.ensemble import RandomForestClassifier
 import numpy as np
 import pandas as pd
+from matplotlib import pyplot as plt
 def randomforests():
 
     results=wearable()
@@ -18,22 +19,30 @@ def randomforests():
     print(train)
     X=train.filter(items=['accelerationx','accelerationy','accelerationz'])
     Y=train["groundtruthstate"]
-    realX=[]
-    #for j in X:
-    #    realX.append(j[0])
-    #X=X.values
+    Xresult=test["groundtruthstate"]
+    Xresult=Xresult.copy()
+    Xtest=test.filter(items=['accelerationx','accelerationy','accelerationz'])
     print(X)
     #print(Y)
 
     seed = 7
     num_trees = 100
     max_features = 1
-    kfold = model_selection.KFold(n_splits=100, random_state=seed)
+    kfold = model_selection.KFold(n_splits=20, random_state=seed)
     model = RandomForestClassifier(n_estimators=num_trees, max_features=max_features)
     results = model_selection.cross_val_score(model, X, Y, cv=kfold)
-    
-    print(results)
-    print(results.mean())
+    model.fit(X,Y)
+    prediction=model.predict(Xtest)
+    #pd.Series(prediction)
+    #Xresult["predictedvalues"]=prediction
+    indexlist=[]
+    for i in range(len(prediction)):
+        indexlist.append(i)
+    plt.scatter(indexlist,prediction,color='red')
+    plt.scatter(indexlist,Xresult.values,color='blue')
+    plt.show()
+    #print(Xresult)
+    #print(results.mean())
     #print(train)
     #print(test)
     #for x in results:
