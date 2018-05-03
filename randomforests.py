@@ -28,7 +28,7 @@ def randomforests():
     seed = 7
     num_trees = 100
     max_features = 1
-    kfold = model_selection.KFold(n_splits=20, random_state=seed)
+    kfold = model_selection.KFold(n_splits=200, random_state=seed)
     model = RandomForestClassifier(n_estimators=num_trees, max_features=max_features)
     results = model_selection.cross_val_score(model, X, Y, cv=kfold)
     model.fit(X,Y)
