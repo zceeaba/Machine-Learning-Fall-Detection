@@ -10,7 +10,7 @@ def processsilhouette():
     print(pdarray)
     count=0
     for i in gts.values:
-        if count<500:
+        if count<2000:
             timestr = i[2].strftime("%Y%m%d-%H%M%S")
             if i[0]==0:
                 #print(i[1])
