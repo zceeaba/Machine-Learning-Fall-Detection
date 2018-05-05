@@ -4,6 +4,21 @@ from matplotlib import pyplot as plt
 from FallDetect.readsilhouette import readsilhouette
 import pandas as pd
 import math
+from skimage.measure import compare_ssim as ssim
+import numpy as np
+
+
+def mse(imageA, imageB):
+    err = np.sum((imageA.astype("float") - imageB.astype("float")) ** 2)
+    err /= float(imageA.shape[0] * imageA.shape[1])
+    return err
+
+
+def compare_images(imageA, imageB):
+    #m = mse(imageA, imageB)
+    s = ssim(imageA, imageB)
+    return s
+
 #data=readpickle("testdataforbb.txt")
 data=readpickle("finalsillbbdata.txt")
 def imagewrite():
@@ -38,55 +53,126 @@ for i in data:
     cv2.imwrite(filename,image1)
     count+=1
 """
+def returnvideo():
+    data = readpickle("finalsillbbdata.txt")
+    for j in list(data):
+        if len(data[j]) < 2:
+            del data[j]
+    array = readsilhouette()
+    #print(array)
+    count=0
+    print(len(array))
+    length=len(array)
+    keys=list(data.keys())
+    def determine(value):
+        if value in keys:
+            return False
+        else:
+            return True
+    newarray = [x for x in array if not determine(x["time"])]
+    bb=[]
+    bbcen=[]
+    for i in data:
+        bb.append(data[i][1])
+        bbcen.append(data[i][2])
+        count+=1
+    def distance(pointa,pointb):
+        dis=math.sqrt(((pointa[0]-pointb[0])**2+(pointa[1]-pointb[1])**2))
+        return dis
+
+    def angle(pointa,pointb):
+        y=pointa[1]-pointb[1]
+        x=pointa[0]-pointb[0]
+        angle=math.atan2(y,x)
+        degree=math.degrees(angle)
+        return degree
+
+    newarray[0]["bb"]=bb[0]
+    newarray[0]["bbcen"]=bbcen[1]
+    newarray[0]["distance"]=0
+    newarray[0]["angle"]=0
+    #newarray[0]["mse"]=0
+    #newarray[0]["ssim"]=0
+
+    for j in range(1,len(newarray)):
+        print(j)
+        newarray[j]["bb"]=bb[j]
+        newarray[j]["distance"]=distance(bb[j],bb[j-1])
+        newarray[j]["angle"]=angle(bb[j],bb[j-1])
+        newarray[j]["bbcen"]=bbcen[j]
+        #firstimage=cv2.imread("imagesb/"+str(j-1)+".png")
+        #secondimage=cv2.imread("imagesb/"+str(j)+".png")
+        #a = cv2.cvtColor(firstimage, cv2.COLOR_BGR2GRAY)
+        #b = cv2.cvtColor(secondimage, cv2.COLOR_BGR2GRAY)
+        #s=compare_images(a,b)
+        #newarray[j]["ssim"]=s
+        #newarray[j]["mse"]=m
+
+    # import the necessary packages
+    #numarray=np.array(newarray)
+    pdarray = pd.DataFrame(newarray)
+    return pdarray
+
+from sklearn import model_selection
+from matplotlib import pyplot as plt
 import numpy as np
-for j in list(data):
-    if len(data[j]) < 2:
-        del data[j]
-array = readsilhouette()
-#print(array)
-count=0
-print(len(array))
-length=len(array)
-keys=list(data.keys())
-def determine(value):
-    if value in keys:
-        return False
-    else:
-        return True
-newarray = [x for x in array if not determine(x["time"])]
-bb=[]
-bbcen=[]
-for i in data:
-    bb.append(data[i][1])
-    bbcen.append(data[i][2])
-    count+=1
-def distance(pointa,pointb):
-    dis=math.sqrt(((pointa[0]-pointb[0])**2+(pointa[1]-pointb[1])**2))
-    return dis
+import pandas as pd
+from sklearn.svm import SVC
+from sklearn.ensemble import RandomForestClassifier as RF
+from sklearn.neighbors import KNeighborsClassifier as KNN
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import KFold
 
-def angle(pointa,pointb):
-    y=pointa[1]-pointb[1]
-    x=pointa[0]-pointb[0]
-    angle=math.atan2(y,x)
-    degree=math.degrees(angle)
-    return degree
 
-newarray[0]["bb"]=bb[0]
-newarray[0]["bbcen"]=bb[1]
-newarray[0]["distance"]=0
-newarray[0]["angle"]=0
+def run_cv(X, y, clf_class, **kwargs):
+    # Construct a kfolds object
+    kf = KFold(n_splits=5, shuffle=True, random_state=None)
+    y_pred = y.copy()
+    np.nan_to_num(X)
+    # Iterate through folds
+    for train_index, test_index in kf.split(X):
+        X_train, X_test = X[train_index], X[test_index]
+        y_train = y[train_index]
+        # Initialize a classifier with key word arguments
+        clf = clf_class(**kwargs)
+        clf.fit(X_train, y_train)
+        y_pred[test_index] = clf.predict(X_test)
+    return y_pred
 
-for j in range(1,len(newarray)):
-    newarray[j]["bb"]=bb[j]
-    newarray[j]["distance"]=distance(bb[j],bb[j-1])
-    newarray[j]["angle"]=angle(bb[j],bb[j-1])
-    newarray[j]["bbcen"]=bbcen[j]
 
-pdarray = pd.DataFrame(newarray)
+def accuracy(y_true, y_pred):
+    # NumPy interprets True and False as 1. and 0.
+    indexlist = []
+    for i in range(len(y_pred)):
+        indexlist.append(i)
+    #    plt.figure()
+    plt.scatter(indexlist, y_pred, color='red')
+    plt.scatter(indexlist, y_true, color='blue')
+    plt.show()
+    return np.mean(y_true == y_pred)
 
-print(pdarray)
-#gts = pdarray.filter(items=['groundtruthstate', 'imagevalue', 'time'])
 
+def classifiers():
+    df = returnvideo()
+
+    X = df.filter(items=['angle', 'distance'])
+    Y = df["groundtruthstate"]
+    X = X.as_matrix().astype(np.float)
+    Y = Y.as_matrix().astype(np.float)
+
+    # optional StandardScaler()
+    scaler = StandardScaler()
+    X = scaler.fit_transform(X)
+
+    print("Support vector machines:")
+    print("%.3f" % accuracy(Y, run_cv(X, Y, SVC)))
+    print("Random forest:")
+    print("%.3f" % accuracy(Y, run_cv(X, Y, RF)))
+    print("K-nearest-neighbors:")
+    print("%.3f" % accuracy(Y, run_cv(X, Y, KNN)))
+
+
+classifiers()
 """
 count=0
 for i in data:
