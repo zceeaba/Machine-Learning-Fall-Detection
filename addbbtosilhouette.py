@@ -6,6 +6,7 @@ import pandas as pd
 import math
 from skimage.measure import compare_ssim as ssim
 import numpy as np
+from FallDetect.pickledata import pickledata
 
 
 def mse(imageA, imageB):
@@ -15,9 +16,9 @@ def mse(imageA, imageB):
 
 
 def compare_images(imageA, imageB):
-    #m = mse(imageA, imageB)
+    m = mse(imageA, imageB)
     s = ssim(imageA, imageB)
-    return s
+    return m,s
 
 #data=readpickle("testdataforbb.txt")
 data=readpickle("finalsillbbdata.txt")
@@ -91,8 +92,8 @@ def returnvideo():
     newarray[0]["bbcen"]=bbcen[1]
     newarray[0]["distance"]=0
     newarray[0]["angle"]=0
-    #newarray[0]["mse"]=0
-    #newarray[0]["ssim"]=0
+    newarray[0]["mse"]=0
+    newarray[0]["ssim"]=0
 
     for j in range(1,len(newarray)):
         print(j)
@@ -100,21 +101,24 @@ def returnvideo():
         newarray[j]["distance"]=distance(bb[j],bb[j-1])
         newarray[j]["angle"]=angle(bb[j],bb[j-1])
         newarray[j]["bbcen"]=bbcen[j]
-        #firstimage=cv2.imread("imagesb/"+str(j-1)+".png")
-        #secondimage=cv2.imread("imagesb/"+str(j)+".png")
-        #a = cv2.cvtColor(firstimage, cv2.COLOR_BGR2GRAY)
-        #b = cv2.cvtColor(secondimage, cv2.COLOR_BGR2GRAY)
-        #s=compare_images(a,b)
-        #newarray[j]["ssim"]=s
-        #newarray[j]["mse"]=m
+        firstimage=cv2.imread("imagesb/"+str(j-1)+".png")
+        secondimage=cv2.imread("imagesb/"+str(j)+".png")
+        a = cv2.cvtColor(firstimage, cv2.COLOR_BGR2GRAY)
+        b = cv2.cvtColor(secondimage, cv2.COLOR_BGR2GRAY)
+        m,s=compare_images(a,b)
+        newarray[j]["ssim"]=s
+        newarray[j]["mse"]=m
 
+    pickledata(newarray,"videoclassifier")
     # import the necessary packages
     #numarray=np.array(newarray)
+
     pdarray = pd.DataFrame(newarray)
     return pdarray
 
-from sklearn import model_selection
 from matplotlib import pyplot as plt
+
+from sklearn import model_selection
 import numpy as np
 import pandas as pd
 from sklearn.svm import SVC
@@ -122,6 +126,9 @@ from sklearn.ensemble import RandomForestClassifier as RF
 from sklearn.neighbors import KNeighborsClassifier as KNN
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import KFold
+import scikitplot as skplt
+from sklearn import metrics
+import sklearn
 
 
 def run_cv(X, y, clf_class, **kwargs):
@@ -129,15 +136,61 @@ def run_cv(X, y, clf_class, **kwargs):
     kf = KFold(n_splits=5, shuffle=True, random_state=None)
     y_pred = y.copy()
     np.nan_to_num(X)
+    print(clf_class)
     # Iterate through folds
-    for train_index, test_index in kf.split(X):
-        X_train, X_test = X[train_index], X[test_index]
-        y_train = y[train_index]
-        # Initialize a classifier with key word arguments
+    if str(clf_class) == "<class 'sklearn.ensemble.forest.RandomForestClassifier'>":
+        kwargs["n_estimators"] = 100
+        print(clf_class(**kwargs))
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25)
         clf = clf_class(**kwargs)
         clf.fit(X_train, y_train)
-        y_pred[test_index] = clf.predict(X_test)
-    return y_pred
+        probas = clf.predict_proba(X_test)
+        skplt.metrics.plot_roc_curve(y_test, probas)
+        plt.show()
+        #        args = "bootstrap=True, class_weight=None, criterion='gini', max_depth=None, max_features='auto', max_leaf_nodes=None, min_impurity_decrease=0.0, min_impurity_split=None, min_samples_leaf=1, min_samples_split=2, min_weight_fraction_leaf=0.0, n_estimators=100, n_jobs=1, oob_score=False, random_state=None, verbose=0, warm_start=False"
+        for train_index, test_index in kf.split(X):
+            X_train, X_test = X[train_index], X[test_index]
+            y_train = y[train_index]
+            # Initialize a classifier with key word arguments
+            clf = clf_class(**kwargs)
+            clf.fit(X_train, y_train)
+            y_pred[test_index] = clf.predict(X_test)
+        return y_pred
+    elif str(clf_class) == "<class 'sklearn.neighbors.classification.KNeighborsClassifier'>":
+        kwargs["n_neighbors"] = 10
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25)
+        clf = clf_class(**kwargs)
+        clf.fit(X_train, y_train)
+        probas = clf.predict_proba(X_test)
+        skplt.metrics.plot_roc_curve(y_test, probas)
+        plt.show()
+        print(clf_class(**kwargs))
+        for train_index, test_index in kf.split(X):
+            X_train, X_test = X[train_index], X[test_index]
+            y_train = y[train_index]
+            # Initialize a classifier with key word arguments
+            clf = clf_class(**kwargs)
+            clf.fit(X_train, y_train)
+            y_pred[test_index] = clf.predict(X_test)
+        return y_pred
+
+    else:
+        kwargs["probability"] = True
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25)
+        clf = clf_class(**kwargs)
+        clf.fit(X_train, y_train)
+        probas = clf.predict_proba(X_test)
+        skplt.metrics.plot_roc_curve(y_test, probas)
+        plt.show()
+        print(clf_class(**kwargs))
+        for train_index, test_index in kf.split(X):
+            X_train, X_test = X[train_index], X[test_index]
+            y_train = y[train_index]
+            # Initialize a classifier with key word arguments
+            clf = clf_class(**kwargs)
+            clf.fit(X_train, y_train)
+            y_pred[test_index] = clf.predict(X_test)
+        return y_pred
 
 
 def accuracy(y_true, y_pred):
@@ -145,17 +198,21 @@ def accuracy(y_true, y_pred):
     indexlist = []
     for i in range(len(y_pred)):
         indexlist.append(i)
-    #    plt.figure()
-    plt.scatter(indexlist, y_pred, color='red')
-    plt.scatter(indexlist, y_true, color='blue')
-    plt.show()
+
+    skplt.metrics.plot_confusion_matrix(y_true, y_pred, normalize=True)
     return np.mean(y_true == y_pred)
 
 
-def classifiers():
-    df = returnvideo()
+from sklearn.model_selection import train_test_split
+from sklearn.naive_bayes import GaussianNB
 
-    X = df.filter(items=['angle', 'distance'])
+
+def classifiers():
+    # readt to merge to master
+    df = pd.DataFrame(readpickle("videoclassifier.txt"))
+    #    print(df)
+    #    df.to_csv(r"C:\Users\Anmol-Sachdeva\Dekstop\AppliedDataScience\pdframe.csv", sep='\t', encoding='utf-8')
+    X = df.filter(items=['angle', 'distance','ssim','mse'])
     Y = df["groundtruthstate"]
     X = X.as_matrix().astype(np.float)
     Y = Y.as_matrix().astype(np.float)
@@ -170,9 +227,20 @@ def classifiers():
     print("%.3f" % accuracy(Y, run_cv(X, Y, RF)))
     print("K-nearest-neighbors:")
     print("%.3f" % accuracy(Y, run_cv(X, Y, KNN)))
+    np.nan_to_num(X)
+    X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.25)
+    nb = GaussianNB()
+    nb.fit(X_train, y_train)
+    predicted_probas = nb.predict_proba(X_test)
+    predicted = nb.predict(X_test)
+    print("GaussianNB:")
+    skplt.metrics.plot_roc_curve(y_test, predicted_probas)
+    plt.show()
+    print("%.3f" % accuracy(y_test, predicted))
 
 
 classifiers()
+
 """
 count=0
 for i in data:
