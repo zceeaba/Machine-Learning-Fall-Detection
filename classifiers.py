@@ -12,7 +12,7 @@ from sklearn.model_selection import KFold
 import scikitplot as skplt
 from sklearn import metrics
 import sklearn
-from FallDetect.dataparser import wearable
+from FallDetect.dataparser import wearable,normalizedwearable
 
 def run_cv(X,y,clf_class,**kwargs):
     # Construct a kfolds object
@@ -88,10 +88,11 @@ from sklearn.naive_bayes import GaussianNB
 def classifiers():
     # readt to merge to master
     results=wearable()
-    df=pd.DataFrame(results)
+    normresults=normalizedwearable(results)
+    df=pd.DataFrame(normresults)
 #    print(df)
 #    df.to_csv(r"C:\Users\Anmol-Sachdeva\Dekstop\AppliedDataScience\pdframe.csv", sep='\t', encoding='utf-8')
-    X=df.filter(items=['magn','accelerationx','accelerationy','accelerationz','magnitude','average'])
+    X=df.filter(items=['magn','accelerationx','accelerationy','accelerationz','threshold'])
     Y=df["groundtruthstate"]
     X = X.as_matrix().astype(np.float)
     Y = Y.as_matrix().astype(np.float)

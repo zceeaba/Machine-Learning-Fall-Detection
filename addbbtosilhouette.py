@@ -209,7 +209,28 @@ from sklearn.naive_bayes import GaussianNB
 
 def classifiers():
     # readt to merge to master
-    df = pd.DataFrame(readpickle("videoclassifier.txt"))
+    vlist=readpickle("videoclassifier.txt")
+    angles=[]
+    distances=[]
+    mses=[]
+    for i in vlist:
+        angles.append(i["angle"])
+        distances.append(i["distance"])
+        mses.append(i["mse"])
+    for i in range(len(distances)):
+        if distances[i]>1000:
+            distances[i]=0
+    maxd=max(distances)
+    print(distances)
+    print(maxd)
+    maxa=max(angles)
+    maxmse=max(mses)
+    for i in range(len(vlist)):
+        vlist[i]["angle"]=float(vlist[i]["angle"]/maxa)
+        vlist[i]["distance"]=float(distances[i]/maxd)
+        vlist[i]["mse"]=float(mses[i]/maxmse)
+    df=pd.DataFrame(vlist)
+    #df = pd.DataFrame(readpickle("videoclassifier.txt"))
     #    print(df)
     #    df.to_csv(r"C:\Users\Anmol-Sachdeva\Dekstop\AppliedDataScience\pdframe.csv", sep='\t', encoding='utf-8')
     X = df.filter(items=['angle', 'distance','ssim','mse'])
