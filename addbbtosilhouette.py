@@ -220,6 +220,15 @@ def classifiers():
     for i in range(len(distances)):
         if distances[i]>1000:
             distances[i]=0
+
+    vlist[0]["velocity"]=0
+    vel=[]
+    vel.append(0)
+    for i in range(1,len(distances)):
+        velocity=((distances[i]-distances[i-1])/((vlist[i]["time"]-vlist[i-1]["time"]).total_seconds()))
+        vlist[i]["velocity"]=velocity
+        vel.append(velocity)
+    maxv=max(vel)
     maxd=max(distances)
     print(distances)
     print(maxd)
@@ -229,11 +238,14 @@ def classifiers():
         vlist[i]["angle"]=float(vlist[i]["angle"]/maxa)
         vlist[i]["distance"]=float(distances[i]/maxd)
         vlist[i]["mse"]=float(mses[i]/maxmse)
+        vlist[i]["velocity"]=float(vel[i]/maxv)
+
+
     df=pd.DataFrame(vlist)
     #df = pd.DataFrame(readpickle("videoclassifier.txt"))
     #    print(df)
     #    df.to_csv(r"C:\Users\Anmol-Sachdeva\Dekstop\AppliedDataScience\pdframe.csv", sep='\t', encoding='utf-8')
-    X = df.filter(items=['angle', 'distance','ssim','mse'])
+    X = df.filter(items=['angle', 'distance','ssim','mse','velocity'])
     Y = df["groundtruthstate"]
     X = X.as_matrix().astype(np.float)
     Y = Y.as_matrix().astype(np.float)
